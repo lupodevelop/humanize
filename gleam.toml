@@ -8,7 +8,6 @@ description = "Small Gleam helpers to make numbers, bytes, durations and lists h
 licences = ["MIT"]
 repository = { type = "github", user = "lupodevelop", repo = "humanize" }
 links = [
-  { title = "GitHub", href = "https://github.com/lupodevelop/humanize" },
   { title = "Hex", href = "https://hex.pm/packages/humanize" }
 ]
 #

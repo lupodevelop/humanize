@@ -1,5 +1,4 @@
 import gleam/int
-import gleam/string
 import gleeunit
 import humanize
 
@@ -231,11 +230,14 @@ pub fn expected_find_denom(n: Int, units: List(String)) -> #(Int, String) {
 fn find_next_unit(units: List(String), target: String) -> String {
   case units {
     [] -> target
-    [u] -> target
-    [u, next, ..rest] ->
-      case u == target {
-        True -> next
-        False -> find_next_unit([next, ..rest], target)
+    [u, ..rest] ->
+      case rest {
+        [] -> target
+        [next, ..rest2] ->
+          case u == target {
+            True -> next
+            False -> find_next_unit([next, ..rest2], target)
+          }
       }
   }
 }

@@ -1,7 +1,7 @@
-# humanize
+<h1 align="center">humanize</h1>
 
 <p align="center">
-  <img src="asset/img/humanize.png" alt="humanize logo" width="160" />
+  <img src="https://raw.githubusercontent.com/lupodevelop/humanize/main/asset/img/humanize.png" alt="humanize logo" width="160" />
   <br />
   <a href="https://github.com/lupodevelop/humanize/actions/workflows/test.yml"><img src="https://github.com/lupodevelop/humanize/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
   <a href="https://hex.pm/packages/humanize"><img src="https://img.shields.io/hexpm/v/humanize.svg" alt="Hex version"></a>

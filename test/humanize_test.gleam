@@ -77,6 +77,21 @@ pub fn percent_tests() {
   assert humanize.percent_ratio(1, 3, 2, humanize.Comma) == "33,33%"
 }
 
+pub fn percent_negative_denominator_test() {
+  // Negative denominator should flip sign and behave like normal percentage
+  assert humanize.percent_ratio(1, -2, 0, humanize.Dot) == "-50%"
+  assert humanize.percent_ratio(-1, 2, 0, humanize.Dot) == "-50%"
+  assert humanize.percent_ratio(-1, -2, 0, humanize.Dot) == "50%"
+}
+
+pub fn percent_large_values_test() {
+  // ensure huge numbers don't crash and sign is correct
+  let big = 9_223_372_036_854_775_807
+  // max 64-bit signed
+  assert humanize.percent_ratio(big, big, 2, humanize.Dot) == "100.00%"
+  assert humanize.percent_ratio(big, -big, 1, humanize.Dot) == "-100.0%"
+}
+
 pub fn ordinal_tests() {
   assert humanize.ordinal(1) == "1st"
   assert humanize.ordinal(2) == "2nd"

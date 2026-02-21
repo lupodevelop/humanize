@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-02-21
+### Changed
+- `percent_ratio` now handles negative numerators and denominators and
+  always prints the requested number of decimal places.
+- Refactored internal helpers (`pow10`, `pow_int`, `join_*`) to be
+  tail-recursive or iterative to avoid stack overflows.
+
+### Fixed
+- Added comprehensive tests for signed and large values in
+  `percent_ratio`.
+
+
 ## [1.0.0] - 2026-02-07
 ### Added
 - Initial stable release candidate with public API:

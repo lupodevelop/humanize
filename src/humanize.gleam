@@ -23,11 +23,16 @@ fn decimal_sep_from_sep(sep: DecimalSeparator) -> String {
   }
 }
 
-fn pow10(n: Int) -> Int {
+// internal tail‑recursive helper for pow10
+fn pow10_acc(n: Int, acc: Int) -> Int {
   case n {
-    0 -> 1
-    _ -> 10 * pow10(n - 1)
+    0 -> acc
+    _ -> pow10_acc(n - 1, acc * 10)
   }
+}
+
+fn pow10(n: Int) -> Int {
+  pow10_acc(n, 1)
 }
 
 /// Format an integer into a compact human-friendly string.
@@ -143,11 +148,16 @@ pub fn bytes_binary(bytes: Int) -> String {
   )
 }
 
-fn pow_int(base: Int, exp: Int) -> Int {
+// internal tail‑recursive helper for general integer powers
+fn pow_int_acc(base: Int, exp: Int, acc: Int) -> Int {
   case exp {
-    0 -> 1
-    _ -> base * pow_int(base, exp - 1)
+    0 -> acc
+    _ -> pow_int_acc(base, exp - 1, acc * base)
   }
+}
+
+fn pow_int(base: Int, exp: Int) -> Int {
+  pow_int_acc(base, exp, 1)
 }
 
 fn repeat_string(n: Int, s: String) -> String {
@@ -158,8 +168,11 @@ fn join_strings(xs: List(String), sep: String) -> String {
   case xs {
     [] -> ""
     [a] -> a
-    [a, b] -> a <> sep <> b
-    [a, ..rest] -> a <> sep <> join_strings(rest, sep)
+    [a, ..rest] ->
+      // fold over the remainder to avoid recursion
+      list_mod.fold(rest, a, fn(acc: String, x: String) -> String {
+        acc <> sep <> x
+      })
   }
 }
 
@@ -168,7 +181,10 @@ fn join_with_conj(items: List(String), conj_full: String) -> String {
     [] -> ""
     [a] -> a
     [a, b] -> a <> conj_full <> b
-    [a, ..rest] -> a <> ", " <> join_with_conj(rest, conj_full)
+    [a, ..rest] ->
+      list_mod.fold(rest, a, fn(acc: String, x: String) -> String {
+        acc <> ", " <> x
+      })
   }
 }
 
@@ -512,34 +528,49 @@ pub fn percent_ratio(
     True -> "NaN%"
 
     False -> {
+      // Determine the overall sign: a negative numerator or negative
+      // denominator (but not both) yields a leading "-".
+      let negative_num = numerator < 0
+      let negative_den = denominator < 0
+      let sign = case negative_num != negative_den {
+        True -> "-"
+        False -> ""
+      }
+      let n = case numerator < 0 {
+        True -> -numerator
+        False -> numerator
+      }
+      let d = case denominator < 0 {
+        True -> -denominator
+        False -> denominator
+      }
+
       let mul = pow10(decimals)
-      let scaled = { numerator * 100 * mul + { denominator / 2 } } / denominator
+      // rounding: add half the denominator before dividing
+      let scaled = { n * 100 * mul + { d / 2 } } / d
       let whole = scaled / mul
       let frac = scaled % mul
       case decimals == 0 {
-        True -> int.to_string(whole) <> "%"
+        True -> sign <> int.to_string(whole) <> "%"
 
-        False ->
-          case frac == 0 {
-            True -> int.to_string(whole) <> "%"
-
-            False -> {
-              let frac_s = int.to_string(frac)
-              let frac_len = string.length(frac_s)
-              let frac_padded = case frac_len < decimals {
-                True -> {
-                  let needed = decimals - frac_len
-                  let zeros = repeat_string(needed, "0")
-                  zeros <> frac_s
-                }
-                False -> frac_s
-              }
-              int.to_string(whole)
-              <> decimal_sep_from_sep(sep)
-              <> frac_padded
-              <> "%"
+        False -> {
+          // always show `decimals` digits; pad with zeroes if necessary
+          let frac_s = int.to_string(frac)
+          let frac_len = string.length(frac_s)
+          let frac_padded = case frac_len < decimals {
+            True -> {
+              let needed = decimals - frac_len
+              let zeros = repeat_string(needed, "0")
+              zeros <> frac_s
             }
+            False -> frac_s
           }
+          sign
+          <> int.to_string(whole)
+          <> decimal_sep_from_sep(sep)
+          <> frac_padded
+          <> "%"
+        }
       }
     }
   }

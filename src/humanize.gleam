@@ -1,6 +1,7 @@
 import gleam/int
 import gleam/list as list_mod
 import gleam/string
+import gleam/time/timestamp
 import internals/locales as il
 
 /// Utilities for formatting numbers, bytes, durations, lists, and timestamps
@@ -181,10 +182,16 @@ fn join_with_conj(items: List(String), conj_full: String) -> String {
     [] -> ""
     [a] -> a
     [a, b] -> a <> conj_full <> b
-    [a, ..rest] ->
-      list_mod.fold(rest, a, fn(acc: String, x: String) -> String {
-        acc <> ", " <> x
-      })
+    _ -> {
+      let reversed = list_mod.reverse(items)
+      case reversed {
+        [] -> ""
+        [last, ..init_rev] -> {
+          let init = list_mod.reverse(init_rev)
+          join_strings(init, ", ") <> conj_full <> last
+        }
+      }
+    }
   }
 }
 
@@ -221,23 +228,28 @@ pub type LocaleData {
     in_: String,
     now: String,
     conj: String,
+    ago_prefix: Bool,
     units: List(#(Int, String, String)),
   )
 }
 
 // Convert raw internal data to LocaleData to avoid circular dependencies.
 fn raw_to_locale_data(
-  raw: #(String, String, String, String, List(#(Int, String, String))),
+  raw: #(String, String, String, String, Bool, List(#(Int, String, String))),
 ) -> LocaleData {
   case raw {
-    #(ago, in_, nowv, conj, units) -> LocaleData(ago, in_, nowv, conj, units)
+    #(ago, in_, nowv, conj, ago_prefix, units) ->
+      LocaleData(ago, in_, nowv, conj, ago_prefix, units)
   }
 }
 
 fn find_locale_raw(
   locale: String,
   list: List(
-    #(String, #(String, String, String, String, List(#(Int, String, String)))),
+    #(
+      String,
+      #(String, String, String, String, Bool, List(#(Int, String, String))),
+    ),
   ),
 ) -> LocaleData {
   case list {
@@ -257,15 +269,20 @@ pub fn get_locale_data(locale: String) -> LocaleData {
 }
 
 /// Create a custom `LocaleData` entry.
+///
+/// When `ago_prefix` is `True`, the "ago" word is placed **before** the
+/// time core (e.g. FR "il y a 2 heures").  When `False` it goes **after**
+/// (e.g. EN "1 hour ago").
 pub fn make_locale(
   code: String,
   ago: String,
   in_: String,
   nowv: String,
   conj: String,
+  ago_prefix: Bool,
   units: List(#(Int, String, String)),
 ) -> #(String, LocaleData) {
-  #(code, LocaleData(ago, in_, nowv, conj, units))
+  #(code, LocaleData(ago, in_, nowv, conj, ago_prefix, units))
 }
 
 /// Lookup `LocaleData` with custom overrides.
@@ -308,7 +325,7 @@ fn time_ago_from_data(
   }
 
   let now_str = case data {
-    LocaleData(_, _, nowv, _, _) -> nowv
+    LocaleData(_, _, nowv, _, _, _) -> nowv
   }
 
   case abs_delta <= 5 {
@@ -316,7 +333,7 @@ fn time_ago_from_data(
 
     False -> {
       let units = case data {
-        LocaleData(_, _, _, _, u) -> u
+        LocaleData(_, _, _, _, _, u) -> u
       }
       let needed_units = case precise {
         True -> max_units
@@ -330,7 +347,11 @@ fn time_ago_from_data(
       case delta < 0 {
         True -> data.in_ <> " " <> core
 
-        False -> core <> " " <> data.ago
+        False ->
+          case data.ago_prefix {
+            True -> data.ago <> " " <> core
+            False -> core <> " " <> data.ago
+          }
       }
     }
   }
@@ -372,6 +393,49 @@ pub fn time_ago_millis(
   let past = past_millis / 1000
   let now = now_millis / 1000
   time_ago_unix(past, now, locale, precise, max_units)
+}
+
+/// Format two `gleam_time` `Timestamp` values as a relative-time string.
+/// This is the modern alternative to `time_ago_unix` when working with
+/// `gleam_time/timestamp.system_time()` or parsed RFC-3339 timestamps.
+///
+/// ```gleam
+/// import gleam/time/timestamp
+///
+/// humanize.time_ago_timestamp(past_ts, timestamp.system_time(), "fr", False, 1)
+/// // -> "il y a 2 heures"
+/// ```
+pub fn time_ago_timestamp(
+  past: timestamp.Timestamp,
+  now: timestamp.Timestamp,
+  locale: String,
+  precise: Bool,
+  max_units: Int,
+) -> String {
+  let #(past_s, _) = timestamp.to_unix_seconds_and_nanoseconds(past)
+  let #(now_s, _) = timestamp.to_unix_seconds_and_nanoseconds(now)
+  time_ago_unix(past_s, now_s, locale, precise, max_units)
+}
+
+/// Like `time_ago_timestamp` but accepts runtime locale overrides.
+pub fn time_ago_timestamp_with_overrides(
+  past: timestamp.Timestamp,
+  now: timestamp.Timestamp,
+  locale: String,
+  overrides: List(#(String, LocaleData)),
+  precise: Bool,
+  max_units: Int,
+) -> String {
+  let #(past_s, _) = timestamp.to_unix_seconds_and_nanoseconds(past)
+  let #(now_s, _) = timestamp.to_unix_seconds_and_nanoseconds(now)
+  time_ago_unix_with_overrides(
+    past_s,
+    now_s,
+    locale,
+    overrides,
+    precise,
+    max_units,
+  )
 }
 
 /// Millisecond-based wrapper with overrides.
@@ -660,7 +724,10 @@ pub fn duration_precise(seconds: Int) -> String {
 
     False -> parts
   }
-  join_strings(parts, ", ")
+  case parts {
+    [] -> "0 seconds"
+    _ -> join_strings(parts, ", ")
+  }
 }
 
 /// Join a list of strings into a human-readable sentence fragment.
@@ -681,22 +748,19 @@ pub fn list_with_ampersand(items: List(String)) -> String {
 
 /// Join a list with a custom conjunction and Oxford comma option.
 pub fn list_locale(items: List(String), conj: String, oxford: Bool) -> String {
+  let resolved_conj = case conj != "" {
+    True -> conj
+    False ->
+      case oxford {
+        True -> ", and "
+        False -> " and "
+      }
+  }
   case items {
     [] -> ""
     [a] -> a
-    [a, b] -> a <> conj <> b
-    _ -> {
-      let conj_full = case conj != "" {
-        True -> conj
-
-        False ->
-          case oxford {
-            True -> ", and "
-            False -> " and "
-          }
-      }
-      join_with_conj(items, conj_full)
-    }
+    [a, b] -> a <> resolved_conj <> b
+    _ -> join_with_conj(items, resolved_conj)
   }
 }
 

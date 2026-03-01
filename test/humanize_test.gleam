@@ -1,4 +1,5 @@
 import gleam/int
+import gleam/time/timestamp
 import gleeunit
 import humanize
 
@@ -29,7 +30,7 @@ pub fn number_with_opts_test() {
     == "1,23M"
 }
 
-pub fn bytes_decimal_tests() {
+pub fn bytes_decimal_test() {
   assert humanize.bytes_decimal(1024) == "1 KB"
   assert humanize.bytes_decimal(1_536_000) == "1.5 MB"
 }
@@ -38,12 +39,12 @@ pub fn bytes_binary_test() {
   assert humanize.bytes_binary(1024) == "1 KiB"
 }
 
-pub fn duration_tests() {
+pub fn duration_test() {
   assert humanize.duration(125) == "2 minutes"
   assert humanize.duration_precise(125) == "2 minutes, 5 seconds"
 }
 
-pub fn time_ago_tests() {
+pub fn time_ago_test() {
   // now
   let now = 1_000_000
   assert humanize.time_ago_unix(now, now, "it", False, 1) == "adesso"
@@ -60,9 +61,24 @@ pub fn time_ago_tests() {
 
   // ratio-like small
   assert humanize.time_ago_unix(now - 3, now, "en", False, 1) == "now"
+
+  // timestamp variants should agree with unix versions
+  let past_ts = timestamp.from_unix_seconds(now - 3600)
+  let now_ts = timestamp.from_unix_seconds(now)
+  assert humanize.time_ago_timestamp(past_ts, now_ts, "en", False, 1)
+    == humanize.time_ago_unix(now - 3600, now, "en", False, 1)
+  assert humanize.time_ago_timestamp_with_overrides(
+      past_ts,
+      now_ts,
+      "en",
+      [],
+      False,
+      1,
+    )
+    == humanize.time_ago_unix(now - 3600, now, "en", False, 1)
 }
 
-pub fn list_tests() {
+pub fn list_test() {
   assert humanize.list(["a", "b"]) == "a and b"
   assert humanize.list(["a", "b", "c"]) == "a, b and c"
   assert humanize.list_locale(["a", "b", "c"], " e ", False) == "a, b e c"
@@ -70,7 +86,7 @@ pub fn list_tests() {
   assert humanize.list_with_ampersand(["a", "b", "c"]) == "a, b & c"
 }
 
-pub fn percent_tests() {
+pub fn percent_test() {
   assert humanize.percent(50) == "50%"
   assert humanize.percent_with(12, 1, humanize.Dot, False) == "12.0%"
   assert humanize.percent_ratio(1, 2, 0, humanize.Dot) == "50%"
@@ -92,7 +108,7 @@ pub fn percent_large_values_test() {
   assert humanize.percent_ratio(big, -big, 1, humanize.Dot) == "-100.0%"
 }
 
-pub fn ordinal_tests() {
+pub fn ordinal_test() {
   assert humanize.ordinal(1) == "1st"
   assert humanize.ordinal(2) == "2nd"
   assert humanize.ordinal(11) == "11th"
@@ -141,7 +157,7 @@ pub fn make_locale_overrides_test() {
   let now = 1_000_000
   let my_units = [#(3600, "hX", "hX"), #(60, "minX", "minX"), #(1, "sX", "sX")]
   let my_locale =
-    humanize.make_locale("xx", "agoX", "inX", "nowX", " & ", my_units)
+    humanize.make_locale("xx", "agoX", "inX", "nowX", " & ", False, my_units)
 
   // now case (<= 5 seconds)
   assert humanize.time_ago_unix_with_overrides(
@@ -193,7 +209,7 @@ pub fn percent_spaced_test() {
   assert humanize.percent_with(12, 1, humanize.Dot, True) == "12.0 %"
 }
 
-pub fn number_boundary_tests() {
+pub fn number_boundary_test() {
   // boundaries around 999/1000 and rounding overflow
   assert humanize.number(999) == "999"
   assert humanize.number(1000) == "1.0K"
@@ -202,12 +218,12 @@ pub fn number_boundary_tests() {
   assert humanize.number_with(999_950, 1, humanize.Dot) == "1.0M"
 }
 
-pub fn bytes_boundary_tests() {
+pub fn bytes_boundary_test() {
   assert humanize.bytes_decimal(999) == "999 B"
   assert humanize.bytes_decimal(1000) == "1 KB"
   assert humanize.bytes_decimal(1500) == "1.5 KB"
   // rounding should promote into the next unit when appropriate
-  assert humanize.bytes_decimal(999_950) == "1.0 MB"
+  assert humanize.bytes_decimal(999_950) == "1 MB"
 }
 
 fn pow_int(base: Int, exp: Int) -> Int {
@@ -350,7 +366,7 @@ pub fn bytes_property_find_mismatch_test() {
 }
 
 // Locale structural tests: plurals, future/past with built-ins
-pub fn locale_structure_tests() {
+pub fn locale_structure_test() {
   let now = 1_000_000
   // French: future/past and plurals
   assert humanize.time_ago_unix(now - 7200, now, "fr", False, 1)
@@ -361,7 +377,7 @@ pub fn locale_structure_tests() {
   // Ensure overrides do not interfere for other locale codes
   let my_units = [#(3600, "hX", "hX"), #(60, "minX", "minX"), #(1, "sX", "sX")]
   let my_locale =
-    humanize.make_locale("zz", "agoZ", "inZ", "nowZ", " & ", my_units)
+    humanize.make_locale("zz", "agoZ", "inZ", "nowZ", " & ", False, my_units)
   // call with a different code should still use built-in en
   assert humanize.time_ago_unix_with_overrides(
       now + 3600,

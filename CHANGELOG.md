@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-03-01
+### Added
+- New `time_ago_timestamp` and `time_ago_timestamp_with_overrides` helpers
+  that take `gleam_time/timestamp.Timestamp` values. These build on top of
+  the existing Unix-based APIs and enable seamless integration with the
+  `gleam_time` ecosystem.
+- Dependency on `gleam_time` for the new timestamp functions. The classic
+  `time_ago_unix*` APIs remain dependency‑free for users who don't need
+  them.
+- Developer convenience: colored output in the `dev/humanize_dev.gleam`
+  playground using a `woof.Custom` formatter.
+
+### Fixed
+- `list` behaved incorrectly for two elements (`"ab"`) and failed to
+  insert the conjunction before the last element when there were three or
+  more items.
+- `duration_precise(0)` returned an empty string; now prints "0 seconds".
+- Time‑ago locale data did not support languages where the "ago" word is a
+  prefix (e.g. French, Spanish); added `ago_prefix: Bool` field and fixed
+  built‑in locales accordingly.
+
 ## [1.0.1] - 2026-02-21
 ### Changed
 - `percent_ratio` now handles negative numerators and denominators and

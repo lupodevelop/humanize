@@ -2,14 +2,25 @@
 ///
 /// Data is stored as raw tuples to avoid circular dependencies with
 /// the public `LocaleData` type.
+///
+/// Tuple layout:
+///   #(ago, in_, now, conj, ago_prefix, units)
+///
+/// `ago_prefix` — when `True` the "ago" word is placed **before** the time
+/// core (e.g. FR "il y a 2 heures", ES "hace 1 día").  When `False` it goes
+/// **after** (e.g. EN "1 hour ago", IT "1 ora fa").
+///
 /// Built-in locales mapping.
 pub fn locales_raw() -> List(
-  #(String, #(String, String, String, String, List(#(Int, String, String)))),
+  #(
+    String,
+    #(String, String, String, String, Bool, List(#(Int, String, String))),
+  ),
 ) {
   [
     #(
       "it",
-      #("fa", "tra", "adesso", " e ", [
+      #("fa", "tra", "adesso", " e ", False, [
         #(31_536_000, "anno", "anni"),
         #(2_592_000, "mese", "mesi"),
         #(86_400, "giorno", "giorni"),
@@ -20,7 +31,7 @@ pub fn locales_raw() -> List(
     ),
     #(
       "en",
-      #("ago", "in", "now", " and ", [
+      #("ago", "in", "now", " and ", False, [
         #(31_536_000, "year", "years"),
         #(2_592_000, "month", "months"),
         #(86_400, "day", "days"),
@@ -31,7 +42,7 @@ pub fn locales_raw() -> List(
     ),
     #(
       "es",
-      #("hace", "en", "ahora", " y ", [
+      #("hace", "en", "ahora", " y ", True, [
         #(31_536_000, "año", "años"),
         #(2_592_000, "mes", "meses"),
         #(86_400, "día", "días"),
@@ -42,7 +53,7 @@ pub fn locales_raw() -> List(
     ),
     #(
       "fr",
-      #("il y a", "dans", "maintenant", " et ", [
+      #("il y a", "dans", "maintenant", " et ", True, [
         #(31_536_000, "an", "ans"),
         #(2_592_000, "mois", "mois"),
         #(86_400, "jour", "jours"),
@@ -53,7 +64,7 @@ pub fn locales_raw() -> List(
     ),
     #(
       "de",
-      #("vor", "in", "jetzt", " und ", [
+      #("vor", "in", "jetzt", " und ", True, [
         #(31_536_000, "Jahr", "Jahre"),
         #(2_592_000, "Monat", "Monate"),
         #(86_400, "Tag", "Tage"),
@@ -64,7 +75,7 @@ pub fn locales_raw() -> List(
     ),
     #(
       "pt",
-      #("há", "em", "agora", " e ", [
+      #("há", "em", "agora", " e ", True, [
         #(31_536_000, "ano", "anos"),
         #(2_592_000, "mês", "meses"),
         #(86_400, "dia", "dias"),
@@ -82,9 +93,10 @@ pub fn default_raw() -> #(
   String,
   String,
   String,
+  Bool,
   List(#(Int, String, String)),
 ) {
-  #("ago", "in", "now", " and ", [
+  #("ago", "in", "now", " and ", False, [
     #(31_536_000, "year", "years"),
     #(2_592_000, "month", "months"),
     #(86_400, "day", "days"),

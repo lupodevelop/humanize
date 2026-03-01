@@ -23,8 +23,12 @@ Small Gleam helpers to make numbers, bytes, durations and lists human-friendly.
 | `humanize.ordinal/1` | Ordinal suffixes (`1st`, `2nd`, `3rd`, ...) |
 | `humanize.time_ago_unix/5` | Humanize a Unix timestamp relative to `now` (locale-aware) |
 | `humanize.time_ago_unix_with_overrides/6` | Same as above but accepts runtime locale overrides |
+| `humanize.time_ago_timestamp/5` | Like `time_ago_unix` but takes `gleam_time/timestamp.Timestamp` values |
+| `humanize.time_ago_timestamp_with_overrides/6` | Timestamp version with locale overrides |
 | `humanize.make_locale/6` | Construct a custom locale entry to pass as an override |
 | `internals/locales.gleam` | Internal table with built-in locales (`it`, `en`, `es`, `fr`, `de`, `pt`) |
+
+> **Note:** the library now depends on [gleam_time](https://hex.pm/packages/gleam_time) when using the `time_ago_timestamp*` APIs.
 
 ## Examples
 
@@ -57,6 +61,17 @@ import humanize
 
 // Basic lookup using built-in locales
 humanize.time_ago_unix(1_620_000_000, 1_620_000_360, "en", False, 1) // "6 minutes ago"
+
+// with gleam_time timestamps (requires adding `gleam_time` deps)
+import gleam/time/timestamp
+
+humanize.time_ago_timestamp(
+  timestamp.from_unix_seconds(1_620_000_000),
+  timestamp.from_unix_seconds(1_620_000_360),
+  "en",
+  False,
+  1,
+) // "6 minutes ago"
 
 // For custom locale examples see the "Locale overrides" section below.
 
